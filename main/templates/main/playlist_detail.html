@@ -1,0 +1,83 @@
+{% extends 'main/base.html' %}
+{% block title %}{{ playlist.name }}{% endblock %}
+{% block content %}
+
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="margin: 0;">{{ playlist.name }}</h1>
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <span style="color: var(--text-dim);">{{ tracks.count }} треков</span>
+        <a href="{% url 'delete_playlist' playlist.id %}"
+           onclick="return confirm('Удалить плейлист «{{ playlist.name|escapejs }}»? Это действие нельзя отменить.');"
+           style="background: transparent; border: 1px solid #ff4d6d; color: #ff4d6d; padding: 6px 16px; border-radius: 20px; text-decoration: none; font-size: 0.9rem; transition: 0.2s;"
+           onmouseover="this.style.background='#ff4d6d'; this.style.color='#fff';"
+           onmouseout="this.style.background='transparent'; this.style.color='#ff4d6d';"
+           title="Удалить плейлист">
+            Удалить
+        </a>
+    </div>
+</div>
+
+{% for track in tracks %}
+<div class="track-row">
+    <!-- Обложка трека -->
+    {% if track.album and track.album.cover %}
+        <img src="{{ track.album.cover.url }}" class="track-avatar" alt="Обложка">
+    {% else %}
+        <div class="track-avatar" style="background: #1e1e2e; display: flex; align-items: center; justify-content: center; color: #555;">&#9835;</div>
+    {% endif %}
+
+    <!-- Название и исполнители -->
+    <div class="track-info-text">
+        <div class="track-title">{{ track.title }}</div>
+        <div class="track-artist">
+            {% for artist in track.artists.all %}
+                <a href="{% url 'artist_detail' artist.id %}"
+                   hx-get="{% url 'artist_detail' artist.id %}"
+                   hx-target="#main-content"
+                   hx-select="#main-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   style="color: var(--text-dim); text-decoration: none;">
+                    {{ artist.name }}
+                </a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Действия (появляются при наведении) -->
+    <div class="track-actions">
+        <button class="play-track-btn play-track"
+                data-url="{% url 'stream_audio' file_path=track.audio_file.name %}"
+                data-title="{{ track.title }}"
+                data-artist="{% for a in track.artists.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                data-index="{{ forloop.counter0 }}"
+                data-track-id="{{ track.id }}"
+                data-cover="{% if track.album and track.album.cover %}{{ track.album.cover.url }}{% endif %}"
+                title="Слушать">▶</button>
+
+        {% if user.is_authenticated %}
+        <button class="add-to-playlist-btn"
+                hx-get="{% url 'user_playlists' %}?track_id={{ track.id }}"
+                hx-target="#playlist-modal-body"
+                hx-swap="innerHTML"
+                title="Добавить в другой плейлист">+</button>
+
+        <a href="{% url 'remove_from_playlist' playlist.id track.id %}"
+           hx-get="{% url 'remove_from_playlist' playlist.id track.id %}"
+           hx-target="#main-content"
+           hx-select="#main-content"
+           hx-swap="outerHTML"
+           hx-push-url="true"
+           title="Удалить из плейлиста"
+           style="background: none; border: none; color: var(--text-dim); font-size: 1.3rem; text-decoration: none; padding: 4px; border-radius: 50%; transition: 0.2s;"
+           onmouseover="this.style.background='rgba(255,77,109,0.2)'; this.style.color='#ff4d6d';"
+           onmouseout="this.style.background='none'; this.style.color='var(--text-dim)';"
+           class="remove-track-btn">&#10005;</a>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+    <p style="color: var(--text-dim);">В этом плейлисте пока нет треков.</p>
+{% endfor %}
+
+{% endblock %}

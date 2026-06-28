@@ -1,0 +1,66 @@
+{% extends 'main/base.html' %}
+{% block title %}История прослушиваний{% endblock %}
+{% block content %}
+
+<h2 style="margin-bottom: 1.5rem;">История прослушиваний</h2>
+
+{% for entry in history %}
+<div class="track-row">
+    <!-- Обложка трека -->
+    {% if entry.track.album and entry.track.album.cover %}
+        <img src="{{ entry.track.album.cover.url }}" class="track-avatar" alt="Обложка">
+    {% else %}
+        <div class="track-avatar" style="background: #1e1e2e; display: flex; align-items: center; justify-content: center; color: #555;">&#9835;</div>
+    {% endif %}
+
+    <!-- Название, исполнители и дата -->
+    <div class="track-info-text">
+        <div class="track-title">{{ entry.track.title }}</div>
+        <div class="track-artist">
+            {% for artist in entry.track.artists.all %}
+                <a href="{% url 'artist_detail' artist.id %}"
+                   hx-get="{% url 'artist_detail' artist.id %}"
+                   hx-target="#main-content"
+                   hx-select="#main-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   style="color: var(--text-dim); text-decoration: none;">
+                    {{ artist.name }}
+                </a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+        <div style="font-size: 0.75rem; color: var(--text-dim); opacity: 0.7; margin-top: 2px;">
+            {{ entry.listened_at|date:"d.m.Y H:i" }}
+        </div>
+    </div>
+
+    <!-- Действия (появляются при наведении) -->
+    <div class="track-actions">
+        <button class="play-track-btn play-track"
+                data-url="{% url 'stream_audio' file_path=entry.track.audio_file.name %}"
+                data-title="{{ entry.track.title }}"
+                data-artist="{% for a in entry.track.artists.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                data-index="{{ forloop.counter0 }}"
+                data-track-id="{{ entry.track.id }}"
+                data-cover="{% if entry.track.album and entry.track.album.cover %}{{ entry.track.album.cover.url }}{% endif %}"
+                title="Слушать">▶</button>
+
+        {% if user.is_authenticated %}
+        <button class="like-btn {% if entry.track.id in liked_track_ids %}active{% endif %}"
+                data-track-id="{{ entry.track.id }}">
+            {% if entry.track.id in liked_track_ids %}♥{% else %}♡{% endif %}
+        </button>
+
+        <button class="add-to-playlist-btn"
+                hx-get="{% url 'user_playlists' %}?track_id={{ entry.track.id }}"
+                hx-target="#playlist-modal-body"
+                hx-swap="innerHTML"
+                title="Добавить в плейлист">+</button>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+    <p style="color: var(--text-dim);">Вы ещё ничего не слушали.</p>
+{% endfor %}
+
+{% endblock %}

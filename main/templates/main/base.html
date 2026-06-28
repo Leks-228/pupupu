@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Музыкальный сайт{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+    <style>
+        /* ========== ОСНОВНЫЕ ПЕРЕМЕННЫЕ ========== */
+        :root {
+            --sidebar-width: 260px;
+            --glass-bg: rgba(18, 18, 30, 0.65);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent: #ff4d6d;
+            --accent-glow: #ff7b9c;
+            --text: #f0f0f0;
+            --text-dim: #a0a0b0;
+            --player-height: 90px;
+            --transition-speed: 0.3s;
+        }
+
+        body.light {
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --text: #1a1a2e;
+            --text-dim: #555;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: #0b0b15;
+            color: var(--text);
+            min-height: 100vh;
+            transition: background 0.5s, color 0.3s;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        body.light {
+            background: #f5f5f7;
+        }
+
+        /* Динамический градиентный фон */
+        .bg-animated {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255, 77, 109, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(100, 100, 255, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, #0b0b15 0%, #0a0a12 100%);
+            animation: bgMove 20s ease-in-out infinite alternate;
+        }
+
+        body.light .bg-animated {
+            background:
+                radial-gradient(circle at 20% 30%, rgba(255, 77, 109, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(100, 100, 255, 0.05) 0%, transparent 50%),
+                radial-gradient(circle at 50% 50%, #f0f0f5 0%, #e5e5ee 100%);
+        }
+
+        @keyframes bgMove {
+            0% {
+                transform: scale(1.05) translate(-2%, -2%);
+            }
+            100% {
+                transform: scale(1) translate(2%, 2%);
+            }
+        }
+
+        /* ========== БОКОВАЯ ПАНЕЛЬ ========== */
+        #sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: var(--glass-bg);
+            backdrop-filter: blur(20px) saturate(180%);
+            -webkit-backdrop-filter: blur(20px) saturate(180%);
+            border-right: 1px solid var(--glass-border);
+            color: var(--text);
+            overflow-y: auto;
+            z-index: 1030;
+            padding: 24px 0;
+            box-shadow: 4px 0 30px rgba(0, 0, 0, 0.4);
+            transition: background var(--transition-speed);
+            display: flex;
+            flex-direction: column;
+        }
+
+        #sidebar .logo {
+            font-size: 1.6rem;
+            font-weight: 700;
+            padding: 0 24px 28px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #fff;
+            text-decoration: none;
+            letter-spacing: -0.5px;
+        }
+
+        #sidebar .logo span {
+            background: linear-gradient(135deg, var(--accent), #ff8c42);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        #sidebar .nav-link {
+            color: var(--text-dim);
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            border-radius: 10px;
+            margin: 2px 12px;
+            transition: all 0.2s;
+            text-decoration: none;
+        }
+
+        #sidebar .nav-link:hover,
+        #sidebar .nav-link.active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
+            transform: translateX(4px);
+        }
+
+        #sidebar .nav-link .icon {
+            font-size: 1.2rem;
+            width: 24px;
+            text-align: center;
+            line-height: 1;
+        }
+
+        #sidebar .search-form {
+            padding: 10px 16px;
+            margin-bottom: 16px;
+        }
+
+        #sidebar .search-form input {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            border-radius: 20px;
+            padding: 8px 16px;
+        }
+
+        #sidebar .search-form input::placeholder {
+            color: #888;
+        }
+
+        #sidebar .search-form button {
+            border-radius: 50%;
+            width: 38px;
+            height: 38px;
+            background: var(--accent);
+            border: none;
+            color: #fff;
+            transition: 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #sidebar .search-form button:hover {
+            background: var(--accent-glow);
+            transform: scale(1.05);
+        }
+
+        #sidebar .theme-toggle {
+            margin: auto 16px 20px;
+            padding: 10px 16px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.06);
+            color: var(--text-dim);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+
+        #sidebar .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.12);
+            color: #fff;
+        }
+
+        #sidebar .sidebar-footer {
+            margin-top: auto;
+            padding: 0 16px;
+        }
+
+        /* ========== ОСНОВНОЙ КОНТЕНТ ========== */
+        .main-layout {
+            margin-left: var(--sidebar-width);
+            padding: 20px 20px 20px;          /* уменьшены отступы */
+            min-height: calc(100vh - var(--player-height));
+            padding-bottom: calc(var(--player-height) + 20px);
+            transition: background var(--transition-speed);
+        }
+
+        #main-content {
+            width: 100%;
+            /* убрано ограничение max-width, теперь треки тянутся */
+        }
+
+        /* ========== ПЛЕЕР ВНИЗУ ========== */
+        .fixed-bottom-player {
+            position: fixed;
+            bottom: 0;
+            left: var(--sidebar-width);               /* больше не залезает под сайдбар */
+            width: calc(100% - var(--sidebar-width));
+            height: var(--player-height);
+            background: var(--glass-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-top: 1px solid var(--glass-border);
+            z-index: 1020;
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5);
+        }
+
+        .player-inner {
+            width: 100%;
+            max-width: 1400px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+        }
+
+        /* Обложка в плеере */
+        .player-cover {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            object-fit: cover;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
+            transition: 0.3s;
+        }
+
+        .player-cover.playing {
+            animation: coverGlow 2s infinite;
+        }
+
+        @keyframes coverGlow {
+            0%,
+            100% {
+                box-shadow: 0 4px 15px rgba(255, 77, 109, 0.3);
+            }
+            50% {
+                box-shadow: 0 4px 25px rgba(255, 77, 109, 0.6);
+            }
+        }
+
+        .track-meta {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-meta .title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-meta .artist {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Кнопки управления */
+        .player-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .ctrl-btn {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 1.4rem;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: 0.2s;
+            opacity: 0.7;
+        }
+
+        .ctrl-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+            opacity: 1;
+        }
+
+        .ctrl-btn.active {
+            opacity: 1;
+            color: #fff;
+        }
+
+        .play-btn {
+            background: var(--accent);
+            width: 48px;
+            height: 48px;
+            box-shadow: 0 4px 20px rgba(255, 77, 109, 0.5);
+            opacity: 1;
+        }
+
+        .play-btn:hover {
+            background: var(--accent-glow);
+        }
+
+        .like-btn.active {
+            color: var(--accent);
+        }
+
+        /* Прогресс-бар */
+        .progress-container {
+            flex: 2;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .progress-bar-custom {
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            flex: 1;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff8c42);
+            border-radius: 8px;
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .time {
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            min-width: 40px;
+        }
+
+        /* Визуализатор */
+        .visualizer-bars {
+            display: flex;
+            align-items: flex-end;
+            gap: 3px;
+            height: 28px;
+            margin-left: 16px;
+        }
+
+        .visualizer-bars .bar {
+            width: 4px;
+            background: var(--accent);
+            border-radius: 2px;
+            transition: height 0.06s ease;
+            min-height: 3px;
+            opacity: 0.8;
+        }
+
+        /* Громкость */
+        .volume-slider {
+            width: 80px;
+            accent-color: var(--accent);
+        }
+
+        /* ========== ТРЕКИ В СПИСКЕ ========== */
+        .track-row {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 10px 16px;
+            border-radius: 12px;
+            margin-bottom: 4px;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .track-row:hover {
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
+        }
+
+        .track-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 8px;
+            object-fit: cover;
+        }
+
+        .track-info-text {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .track-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .track-artist {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+
+        /* Действия с треком – скрыты, появляются при наведении */
+        .track-actions {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+
+        .track-row:hover .track-actions {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .play-track-btn,
+        .like-btn,
+        .add-to-playlist-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 1.3rem;
+            padding: 6px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .play-track-btn:hover,
+        .like-btn:hover,
+        .add-to-playlist-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .like-btn.active {
+            color: var(--accent);
+        }
+
+        .add-to-playlist-btn {
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        /* Адаптив */
+        @media (max-width: 768px) {
+            :root {
+                --sidebar-width: 0px;
+            }
+
+            #sidebar {
+                position: fixed;
+                z-index: 1040;
+                width: 280px;
+                transform: translateX(-100%);
+                transition: transform 0.3s;
+            }
+
+            #sidebar.open {
+                transform: translateX(0);
+            }
+
+            .main-layout {
+                margin-left: 0;
+                padding: 20px;
+            }
+
+            .fixed-bottom-player {
+                left: 0;
+                width: 100%;
+                padding: 0 15px;
+            }
+        }
+        /* ===== СВЕТЛАЯ ТЕМА: УЛУЧШЕННЫЕ ХОВЕРЫ ===== */
+
+        /* Навигация в сайдбаре */
+        body.light #sidebar .nav-link:hover,
+        body.light #sidebar .nav-link.active {
+            background: rgba(0, 0, 0, 0.06);   /* лёгкий серый фон */
+            color: var(--text);                /* основной цвет текста (тёмный) */
+            /* можно оставить transform, если нужно */
+        }
+
+        /* Строки треков в списках */
+        body.light .track-row:hover {
+            background: rgba(0, 0, 0, 0.06);   /* заметный, но не резкий фон */
+            /* transform остаётся, если хотите смещение */
+        }
+
+        /* Светлая тема: видимый прогресс-бар */
+        body.light .progress-bar-custom {
+            background: rgba(0, 0, 0, 0.12);   /* или #d0d0d0 */
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animated"></div>
+
+    <!-- Боковая панель -->
+    <aside id="sidebar">
+        <a href="/" class="logo" hx-get="/" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">
+            <span class="icon">&#9835;</span> <span>MusicPlayer</span>
+        </a>
+
+        <form class="search-form d-flex"
+              hx-get="{% url 'search' %}"
+              hx-target="#main-content"
+              hx-select="#main-content"
+              hx-swap="outerHTML"
+              hx-push-url="true">
+            <input class="form-control me-2" type="search" name="q" placeholder="Поиск..." aria-label="Поиск">
+            <button class="btn" type="submit">&#128269;</button>
+        </form>
+
+        <nav>
+            <a href="/" class="nav-link" hx-get="/" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">Главная</a>
+            <a href="{% url 'popular' %}" class="nav-link" hx-get="{% url 'popular' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">Популярное</a>
+
+            {% if user.is_authenticated %}
+                <a href="{% url 'playlist_list' %}" class="nav-link" hx-get="{% url 'playlist_list' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true"><span class="icon">&#9776;</span> Плейлисты</a>
+                <a href="{% url 'favorites' %}" class="nav-link" hx-get="{% url 'favorites' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true"><span class="icon">&#9829;</span> Избранное</a>
+                <a href="{% url 'listening_history' %}" class="nav-link" hx-get="{% url 'listening_history' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">История</a>
+                {% if user.is_staff %}
+                    <a href="{% url 'upload' %}" class="nav-link" hx-get="{% url 'upload' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true"><span class="icon">&#8682;</span> Загрузить трек</a>
+                    <a href="{% url 'upload_album' %}" class="nav-link" hx-get="{% url 'upload_album' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true"><span class="icon">&#9641;</span> Загрузить альбом</a>
+                {% endif %}
+                <a href="{% url 'profile' %}" class="nav-link" hx-get="{% url 'profile' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">Профиль</a>
+            {% else %}
+                <a href="{% url 'login' %}" class="nav-link" hx-get="{% url 'login' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">Вход</a>
+                <a href="{% url 'register' %}" class="nav-link" hx-get="{% url 'register' %}" hx-target="#main-content" hx-select="#main-content" hx-swap="outerHTML" hx-push-url="true">Регистрация</a>
+            {% endif %}
+        </nav>
+        <!-- Удалены: sidebar-footer и кнопка theme-toggle -->
+    </aside>
+
+    <!-- Основной контент -->
+    <div class="main-layout">
+        <main id="main-content" class="container-fluid" hx-history-elt>
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Плеер -->
+    <div class="fixed-bottom-player" id="persistent-player" hx-preserve="true">
+        <div class="player-inner">
+            <img id="player-cover" class="player-cover" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='56'%3E%3Crect width='56' height='56' fill='%23222'/%3E%3Ctext x='28' y='32' text-anchor='middle' fill='%23555'%3E%E2%99%AB%3C/text%3E%3C/svg%3E" alt="Обложка">
+
+            <div class="track-meta">
+                <div class="title" id="now-playing">Ничего не играет</div>
+                <div class="artist" id="now-artist"></div>
+            </div>
+
+            <div class="player-controls">
+                <button class="ctrl-btn" id="shuffle-btn" title="Перемешать">&#8644;</button>
+                <button class="ctrl-btn" id="prev-btn">&#9664;&#9664;</button>
+                <button class="ctrl-btn play-btn" id="play-pause-btn">&#9654;</button>
+                <button class="ctrl-btn" id="next-btn">&#9654;&#9654;</button>
+                <button class="ctrl-btn" id="repeat-btn" title="Повтор">&#8635;</button>
+                <button class="ctrl-btn like-btn" id="like-btn" title="Нравится">&#9825;</button>
+            </div>
+
+            <div class="progress-container">
+                <span class="time" id="current-time">0:00</span>
+                <div class="progress-bar-custom" id="progress-bar">
+                    <div class="progress-fill" id="progress-fill"></div>
+                </div>
+                <span class="time" id="duration">0:00</span>
+                <div class="visualizer-bars" id="visualizer"></div>
+            </div>
+
+            <input type="range" class="volume-slider" id="volume-slider" min="0" max="1" step="0.01" value="0.7">
+            <audio id="global-player" crossorigin="anonymous" preload="auto"></audio>
+        </div>
+    </div>
+
+    <!-- Toast-уведомления -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" id="toast-container"></div>
+
+    <!-- Модальное окно плейлистов -->
+    <div class="modal fade" id="playlistModal" tabindex="-1" aria-labelledby="playlistModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content" id="playlist-modal-body"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        (function() {
+            if (window.__playerInitialized) return;
+            window.__playerInitialized = true;
+
+            // DOM элементы
+            const audio = document.getElementById('global-player');
+            const playPauseBtn = document.getElementById('play-pause-btn');
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+            const shuffleBtn = document.getElementById('shuffle-btn');
+            const repeatBtn = document.getElementById('repeat-btn');
+            const likeBtn = document.getElementById('like-btn');
+            const progressBar = document.getElementById('progress-bar');
+            const progressFill = document.getElementById('progress-fill');
+            const currentTimeEl = document.getElementById('current-time');
+            const durationEl = document.getElementById('duration');
+            const nowPlaying = document.getElementById('now-playing');
+            const nowArtist = document.getElementById('now-artist');
+            const playerCover = document.getElementById('player-cover');
+            const volumeSlider = document.getElementById('volume-slider');
+            const visualizerEl = document.getElementById('visualizer');
+
+            // Визуализация
+            let audioContext = null;
+            let analyser = null;
+            let animationId = null;
+            const BAR_COUNT = 16;
+
+            function initVisualizer() {
+                visualizerEl.innerHTML = '';
+                for (let i = 0; i < BAR_COUNT; i++) {
+                    const bar = document.createElement('div');
+                    bar.className = 'bar';
+                    bar.style.height = '3px';
+                    visualizerEl.appendChild(bar);
+                }
+            }
+
+            function initAudioContext() {
+                if (audioContext) return;
+                try {
+                    audioContext = new(window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 64;
+                    analyser.smoothingTimeConstant = 0.7;
+                    const source = audioContext.createMediaElementSource(audio);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                } catch (e) {
+                    console.warn('Визуализация аудио недоступна:', e);
+                }
+            }
+
+            function updateVisualizer() {
+                if (!analyser || audio.paused) {
+                    const bars = visualizerEl.children;
+                    for (let bar of bars) {
+                        const h = parseFloat(bar.style.height) || 3;
+                        bar.style.height = Math.max(3, h * 0.9) + 'px';
+                    }
+                    animationId = requestAnimationFrame(updateVisualizer);
+                    return;
+                }
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                analyser.getByteFrequencyData(dataArray);
+                const step = Math.floor(bufferLength / BAR_COUNT);
+                const bars = visualizerEl.children;
+                for (let i = 0; i < BAR_COUNT; i++) {
+                    const value = dataArray[Math.min(i * step, bufferLength - 1)];
+                    const height = Math.max(3, (value / 255) * 25);
+                    bars[i].style.height = height + 'px';
+                }
+                animationId = requestAnimationFrame(updateVisualizer);
+            }
+
+            function stopVisualizer() {
+                if (animationId) cancelAnimationFrame(animationId);
+                const bars = visualizerEl.children;
+                for (let bar of bars) bar.style.height = '3px';
+            }
+
+            // Управление плеером
+            function togglePlay() {
+                if (audio.paused) {
+                    if (!audioContext) initAudioContext();
+                    if (audioContext && audioContext.state === 'suspended') audioContext.resume();
+                    audio.play();
+                } else {
+                    audio.pause();
+                }
+            }
+
+            function updatePlayButton() {
+                playPauseBtn.innerHTML = audio.paused ? '&#9654;' : '&#9646;&#9646;';
+                if (!audio.paused) {
+                    playerCover.classList.add('playing');
+                } else {
+                    playerCover.classList.remove('playing');
+                }
+            }
+
+            function formatTime(seconds) {
+                if (isNaN(seconds)) return '0:00';
+                const mins = Math.floor(seconds / 60);
+                const secs = Math.floor(seconds % 60);
+                return `${mins}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            function updateProgress() {
+                const percent = (audio.currentTime / audio.duration) * 100 || 0;
+                progressFill.style.width = percent + '%';
+                currentTimeEl.textContent = formatTime(audio.currentTime);
+                durationEl.textContent = formatTime(audio.duration);
+            }
+
+            audio.addEventListener('timeupdate', updateProgress);
+            audio.addEventListener('loadedmetadata', () => {
+                durationEl.textContent = formatTime(audio.duration);
+            });
+            audio.addEventListener('play', () => {
+                updatePlayButton();
+                if (!animationId) updateVisualizer();
+            });
+            audio.addEventListener('pause', () => {
+                updatePlayButton();
+                stopVisualizer();
+                updateVisualizer();
+            });
+            audio.addEventListener('ended', () => {
+                if (repeatMode === 'one') {
+                    audio.currentTime = 0;
+                    audio.play();
+                } else if (repeatMode === 'all' || currentIndex < currentQueue.length - 1) {
+                    nextBtn.click();
+                } else {
+                    updatePlayButton();
+                    nowPlaying.textContent = 'Плейлист завершён';
+                    nowArtist.textContent = '';
+                }
+            });
+
+            progressBar.addEventListener('click', (e) => {
+                const rect = progressBar.getBoundingClientRect();
+                const ratio = (e.clientX - rect.left) / rect.width;
+                audio.currentTime = ratio * audio.duration;
+            });
+
+            volumeSlider.addEventListener('input', () => {
+                audio.volume = volumeSlider.value;
+            });
+
+            function getCookie(name) {
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+
+            function shuffleArray(arr) {
+                const a = [...arr];
+                for (let i = a.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [a[i], a[j]] = [a[j], a[i]];
+                }
+                return a;
+            }
+
+            let currentQueue = [];
+            let originalQueue = [];
+            let currentIndex = 0;
+            let currentTrackId = null;
+            let currentTrackTitle = '';
+            let currentTrackArtist = '';
+            let repeatMode = 'none';
+            let shuffleMode = false;
+
+            function buildQueueFromDOM() {
+                const buttons = document.querySelectorAll('.play-track');
+                originalQueue = Array.from(buttons).map(btn => ({
+                    url: btn.dataset.url,
+                    title: btn.dataset.title,
+                    artist: btn.dataset.artist,
+                    trackId: btn.dataset.trackId,
+                    cover: btn.dataset.cover || ''
+                }));
+                currentQueue = [...originalQueue];
+                if (shuffleMode) applyShuffle();
+            }
+
+            function applyShuffle() {
+                if (shuffleMode) {
+                    if (originalQueue.length === 0) originalQueue = [...currentQueue];
+                    currentQueue = shuffleArray(originalQueue);
+                    const currentTrack = originalQueue[currentIndex];
+                    if (currentTrack) {
+                        const newIndex = currentQueue.findIndex(t => t.trackId === currentTrack.trackId);
+                        if (newIndex > -1) {
+                            [currentQueue[0], currentQueue[newIndex]] = [currentQueue[newIndex], currentQueue[0]];
+                        }
+                    }
+                    currentIndex = 0;
+                } else {
+                    if (originalQueue.length > 0) {
+                        currentQueue = [...originalQueue];
+                        originalQueue = [];
+                    }
+                }
+            }
+
+            function updateLikeButtonUI(trackId) {
+                if (!trackId) {
+                    likeBtn.innerHTML = '&#9825;';
+                    likeBtn.classList.remove('active');
+                    return;
+                }
+                fetch(`/check-like/${trackId}/`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    if (data.liked) {
+                        likeBtn.innerHTML = '&#9829;';
+                        likeBtn.classList.add('active');
+                    } else {
+                        likeBtn.innerHTML = '&#9825;';
+                        likeBtn.classList.remove('active');
+                    }
+                }).catch(() => {});
+            }
+
+            function playTrack(url, title, artist, index, trackId, coverUrl) {
+                audio.pause();
+                if (audio.src) {
+                    audio.removeAttribute('src');
+                    audio.load();
+                }
+                currentTrackId = trackId;
+                currentTrackTitle = title;
+                currentTrackArtist = artist;
+                audio.src = url;
+                audio.play().then(() => {
+                    nowPlaying.textContent = title || 'Без названия';
+                    nowArtist.textContent = artist || '';
+                    if (coverUrl) {
+                        playerCover.src = coverUrl;
+                    } else {
+                        const btn = document.querySelector(`.play-track[data-track-id="${trackId}"]`);
+                        if (btn) {
+                            const avatar = btn.closest('.track-row')?.querySelector('.track-avatar');
+                            if (avatar && avatar.src) {
+                                playerCover.src = avatar.src;
+                            } else {
+                                playerCover.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="56" height="56"%3E%3Crect width="56" height="56" fill="%23222"/%3E%3Ctext x="28" y="32" text-anchor="middle" fill="%23555"%3E%E2%99%AB%3C/text%3E%3C/svg%3E';
+                            }
+                        }
+                    }
+                    if (trackId) {
+                        fetch(`/record-listen/${trackId}/`, {
+                            method: 'POST',
+                            headers: {
+                                'X-CSRFToken': getCookie('csrftoken'),
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        });
+                    }
+                    updateLikeButtonUI(trackId);
+                }).catch(err => {
+                    console.warn('Автовоспроизведение заблокировано:', err);
+                    nowPlaying.textContent = `${artist} - ${title} (нажмите play)`;
+                });
+            }
+
+            // Обработчики кнопок плеера
+            playPauseBtn.addEventListener('click', togglePlay);
+            prevBtn.addEventListener('click', () => {
+                if (currentQueue.length === 0) return;
+                currentIndex = (currentIndex - 1 + currentQueue.length) % currentQueue.length;
+                const t = currentQueue[currentIndex];
+                playTrack(t.url, t.title, t.artist, currentIndex, t.trackId, t.cover);
+            });
+            nextBtn.addEventListener('click', () => {
+                if (currentQueue.length === 0) return;
+                currentIndex = (currentIndex + 1) % currentQueue.length;
+                const t = currentQueue[currentIndex];
+                playTrack(t.url, t.title, t.artist, currentIndex, t.trackId, t.cover);
+            });
+
+            shuffleBtn.addEventListener('click', () => {
+                shuffleMode = !shuffleMode;
+                if (currentQueue.length > 0) {
+                    if (shuffleMode) {
+                        originalQueue = [...currentQueue];
+                        currentQueue = shuffleArray(originalQueue);
+                        const currentTrack = originalQueue[currentIndex];
+                        if (currentTrack) {
+                            const newIndex = currentQueue.findIndex(t => t.trackId === currentTrack.trackId);
+                            if (newIndex > -1) currentIndex = newIndex;
+                            else currentIndex = 0;
+                        }
+                    } else {
+                        if (originalQueue.length > 0) {
+                            const currentTrack = currentQueue[currentIndex];
+                            currentQueue = [...originalQueue];
+                            originalQueue = [];
+                            const idx = currentQueue.findIndex(t => t.trackId === currentTrack?.trackId);
+                            currentIndex = idx > -1 ? idx : 0;
+                        }
+                    }
+                }
+                updateControlButtons();
+            });
+
+            repeatBtn.addEventListener('click', () => {
+                if (repeatMode === 'none') repeatMode = 'all';
+                else if (repeatMode === 'all') repeatMode = 'one';
+                else repeatMode = 'none';
+                updateControlButtons();
+            });
+
+            likeBtn.addEventListener('click', () => {
+                if (!currentTrackId) return;
+                fetch(`/like/${currentTrackId}/`, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    if (data.liked) {
+                        likeBtn.innerHTML = '&#9829;';
+                        likeBtn.classList.add('active');
+                    } else {
+                        likeBtn.innerHTML = '&#9825;';
+                        likeBtn.classList.remove('active');
+                    }
+                }).catch(() => {});
+            });
+
+            function updateControlButtons() {
+                // Перемешивание
+                if (shuffleMode) {
+                    shuffleBtn.classList.add('active');
+                    shuffleBtn.style.opacity = '1';
+                } else {
+                    shuffleBtn.classList.remove('active');
+                    shuffleBtn.style.opacity = '0.5';
+                }
+
+                // Повтор
+                if (repeatMode === 'one') {
+                    repeatBtn.innerHTML = '&#8635;&#8321;'; // ↻₁
+                    repeatBtn.classList.add('active');
+                    repeatBtn.style.opacity = '1';
+                } else if (repeatMode === 'all') {
+                    repeatBtn.innerHTML = '&#8635;'; // ↻
+                    repeatBtn.classList.add('active');
+                    repeatBtn.style.opacity = '1';
+                } else {
+                    repeatBtn.innerHTML = '&#8635;'; // ↻
+                    repeatBtn.classList.remove('active');
+                    repeatBtn.style.opacity = '0.5';
+                }
+            }
+
+            // Клик по треку в списках
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.play-track');
+                if (!btn) return;
+                buildQueueFromDOM();
+                const index = parseInt(btn.dataset.index);
+                const url = btn.dataset.url;
+                const title = btn.dataset.title;
+                const artist = btn.dataset.artist;
+                const trackId = btn.dataset.trackId;
+                const cover = btn.dataset.cover || '';
+                currentIndex = index;
+                playTrack(url, title, artist, index, trackId, cover);
+            });
+
+            // Лайк в списках треков (теперь использует те же символы и класс active)
+            document.addEventListener('click', function(e) {
+                const btn = e.target.closest('.like-btn:not(#like-btn)'); // исключаем плеерную кнопку
+                if (!btn) return;
+                e.preventDefault();
+                const trackId = btn.dataset.trackId;
+                if (!trackId) return;
+                fetch(`/like/${trackId}/`, {
+                    method: 'GET',
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => {
+                    if (!data) return;
+                    if (data.liked) {
+                        btn.innerHTML = '&#9829;'; // ♥
+                        btn.classList.add('active');
+                    } else {
+                        btn.innerHTML = '&#9825;'; // ♡
+                        btn.classList.remove('active');
+                    }
+                    // Обновить плеер, если лайкнут текущий трек
+                    if (currentTrackId == trackId) {
+                        updateLikeButtonUI(currentTrackId);
+                    }
+                }).catch(() => {});
+            });
+
+            // Кнопка добавления в плейлист – просто открывает модалку, она есть в DOM
+            // Дополнительных слушателей не нужно, HTMX сам обработает.
+
+            // Инициализация
+            initVisualizer();
+            updateControlButtons();
+            audio.volume = volumeSlider.value;
+
+            // ===================== ТЕМА =====================
+            // Функция обновления UI кнопки (иконка + текст)
+            function updateThemeUI() {
+                const isLight = document.body.classList.contains('light');
+                const themeToggle = document.getElementById('theme-toggle');
+                const themeIcon = document.getElementById('theme-icon');
+                if (themeToggle) {
+                    if (themeIcon) {
+                        themeIcon.innerHTML = isLight ? '&#9790;' : '&#9788;';
+                    }
+                    // Меняем текст после иконки (если есть текстовый узел)
+                    if (themeToggle.childNodes.length > 1) {
+                        const textNode = themeToggle.childNodes[1];
+                        if (textNode && textNode.nodeType === Node.TEXT_NODE) {
+                            textNode.textContent = isLight ? ' Тёмная тема' : ' Светлая тема';
+                        }
+                    }
+                }
+            }
+
+            // Переключение темы
+            function toggleTheme() {
+                const isLight = document.body.classList.contains('light');
+                if (isLight) {
+                    document.body.classList.remove('light');
+                    localStorage.setItem('theme', 'dark');
+                } else {
+                    document.body.classList.add('light');
+                    localStorage.setItem('theme', 'light');
+                }
+                updateThemeUI();
+            }
+
+            // Инициализация темы при загрузке (светлая по умолчанию)
+            (function initTheme() {
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark') {
+                    document.body.classList.remove('light');
+                } else {
+                    document.body.classList.add('light');   // светлая по умолчанию
+                }
+                updateThemeUI();
+            })();
+
+            // Обработчик клика на кнопку темы через делегирование (работает всегда)
+            document.addEventListener('click', function(e) {
+                const toggleBtn = e.target.closest('#theme-toggle');
+                if (toggleBtn) {
+                    toggleTheme();
+                    e.preventDefault();
+                }
+            });
+
+            // После каждого HTMX-обновления обновляем интерфейс кнопки
+            document.addEventListener('htmx:afterSettle', function() {
+                updateThemeUI();
+            });
+
+            // HTMX CSRF
+            document.body.addEventListener('htmx:configRequest', function(event) {
+                event.detail.headers['X-CSRFToken'] = getCookie('csrftoken');
+            });
+
+            // Toast-уведомления
+            function showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container');
+                const toastId = 'toast-' + Date.now();
+                const bgClass = type === 'success' ? 'bg-success text-white' : (type === 'error' ? 'bg-danger text-white' : 'bg-warning');
+                const icon = type === 'success' ? '✓' : (type === 'error' ? '✗' : '⚠');
+                const html = `
+                    <div id="${toastId}" class="toast align-items-center ${bgClass} border-0" role="alert" aria-live="assertive" aria-atomic="true">
+                        <div class="d-flex">
+                            <div class="toast-body">${icon} ${message}</div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Закрыть"></button>
+                        </div>
+                    </div>
+                `;
+                container.insertAdjacentHTML('beforeend', html);
+                const toastEl = document.getElementById(toastId);
+                const toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+                toast.show();
+                toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+            }
+
+            document.body.addEventListener('htmx:afterSwap', function(event) {
+                if (event.target.id === 'playlist-modal-body') {
+                    var modal = new bootstrap.Modal(document.getElementById('playlistModal'));
+                    modal.show();
+                }
+            });
+
+            document.body.addEventListener('htmx:afterRequest', function(event) {
+                if (event.target.closest('#playlist-modal-body') && event.detail.successful) {
+                    try {
+                        var response = JSON.parse(event.detail.xhr.responseText);
+                        if (response.success) {
+                            var modal = bootstrap.Modal.getInstance(document.getElementById('playlistModal'));
+                            if (modal) modal.hide();
+                            showToast(response.message, 'success');
+                        } else {
+                            showToast(response.error || 'Ошибка', 'error');
+                        }
+                    } catch(e) {}
+                }
+            });
+
+            window.showToast = showToast;
+        })();
+    </script>
+</body>
+</html>

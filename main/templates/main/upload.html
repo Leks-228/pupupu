@@ -1,0 +1,58 @@
+{% extends 'main/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Загрузка трека{% endblock %}
+
+{% block content %}
+<div style="max-width: 560px; margin: 0 auto;">
+    <h2 style="margin-bottom: 1.5rem;">Загрузить новый трек</h2>
+
+    <div style="background: var(--glass-bg);
+                backdrop-filter: blur(20px);
+                -webkit-backdrop-filter: blur(20px);
+                border: 1px solid var(--glass-border);
+                border-radius: 16px;
+                padding: 2rem;
+                box-shadow: 0 8px 20px rgba(0,0,0,0.3);">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+
+            <button type="submit"
+                    style="background: var(--accent);
+                           border: none;
+                           color: #fff;
+                           padding: 12px;
+                           width: 100%;
+                           border-radius: 25px;
+                           font-weight: 600;
+                           cursor: pointer;
+                           transition: background 0.2s, transform 0.1s;
+                           box-shadow: 0 4px 12px rgba(255,77,109,0.4);
+                           margin-top: 0.5rem;"
+                    onmouseover="this.style.background='var(--accent-glow)'"
+                    onmouseout="this.style.background='var(--accent)'"
+                    onmousedown="this.style.transform='scale(0.97)'"
+                    onmouseup="this.style.transform='scale(1)'">
+                Загрузить
+            </button>
+        </form>
+
+        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--glass-border); text-align: center; color: var(--text-dim);">
+            <p style="margin-bottom: 0.5rem;">Нет нужного артиста или альбома?</p>
+            <p style="margin: 0;">
+                <a href="/admin/main/artist/add/" target="_blank"
+                   style="color: var(--accent); text-decoration: none; font-weight: 500;"
+                   onmouseover="this.style.color='#fff'"
+                   onmouseout="this.style.color='var(--accent)'">Добавить артиста</a>
+                &nbsp;или&nbsp;
+                <a href="/admin/main/album/add/" target="_blank"
+                   style="color: var(--accent); text-decoration: none; font-weight: 500;"
+                   onmouseover="this.style.color='#fff'"
+                   onmouseout="this.style.color='var(--accent)'">добавить альбом</a>
+                в админке.
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

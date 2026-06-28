@@ -1,0 +1,102 @@
+{% extends 'main/base.html' %}
+{% block title %}Избранное{% endblock %}
+{% block content %}
+
+<h2 style="margin-bottom: 1.5rem;">Избранные треки</h2>
+
+<!-- Поиск -->
+<div style="display: flex; gap: 10px; margin-bottom: 1.5rem;">
+    <input type="text"
+           name="q"
+           placeholder="Поиск в избранном..."
+           value="{{ query }}"
+           hx-get="{% url 'favorites' %}"
+           hx-target="#tracks-list"
+           hx-trigger="keyup changed delay:300ms"
+           hx-select="#tracks-list"
+           autocomplete="off"
+           style="flex: 1; padding: 10px 16px; background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); border-radius: 20px; color: var(--text); outline: none; transition: border 0.2s;"
+           onfocus="this.style.border='1px solid var(--accent)'"
+           onblur="this.style.border='1px solid var(--glass-border)'">
+    {% if query %}
+        <a href="{% url 'favorites' %}"
+           hx-get="{% url 'favorites' %}"
+           hx-target="#tracks-list"
+           hx-select="#tracks-list"
+           onclick="document.querySelector('[name=q]').value='';"
+           style="background: transparent; border: 1px solid var(--glass-border); color: var(--text-dim); padding: 10px 16px; border-radius: 20px; text-decoration: none; transition: 0.2s; display: flex; align-items: center;"
+           onmouseover="this.style.background='rgba(255,255,255,0.08)'; this.style.color='#fff';"
+           onmouseout="this.style.background='transparent'; this.style.color='var(--text-dim)';">
+            &#10005; Сбросить
+        </a>
+    {% endif %}
+</div>
+
+<!-- Список треков (динамический) -->
+<div id="tracks-list">
+    {% for track in tracks %}
+    <div class="track-row">
+        <!-- Обложка -->
+        {% if track.album and track.album.cover %}
+            <img src="{{ track.album.cover.url }}" class="track-avatar" alt="Обложка">
+        {% else %}
+            <div class="track-avatar" style="background: #1e1e2e; display: flex; align-items: center; justify-content: center; color: #555;">&#9835;</div>
+        {% endif %}
+
+        <!-- Название и исполнители -->
+        <div class="track-info-text">
+            <div class="track-title">{{ track.title }}</div>
+            <div class="track-artist">
+                {% for artist in track.artists.all %}
+                    <a href="{% url 'artist_detail' artist.id %}"
+                       hx-get="{% url 'artist_detail' artist.id %}"
+                       hx-target="#main-content"
+                       hx-select="#main-content"
+                       hx-swap="outerHTML"
+                       hx-push-url="true"
+                       style="color: var(--text-dim); text-decoration: none;">
+                        {{ artist.name }}
+                    </a>{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Действия (появляются при наведении) -->
+        <div class="track-actions">
+            <button class="play-track-btn play-track"
+                    data-url="{% url 'stream_audio' file_path=track.audio_file.name %}"
+                    data-title="{{ track.title }}"
+                    data-artist="{% for a in track.artists.all %}{{ a.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                    data-index="{{ forloop.counter0 }}"
+                    data-track-id="{{ track.id }}"
+                    data-cover="{% if track.album and track.album.cover %}{{ track.album.cover.url }}{% endif %}"
+                    title="Слушать">▶</button>
+
+            {% if user.is_authenticated %}
+            <button class="add-to-playlist-btn"
+                    hx-get="{% url 'user_playlists' %}?track_id={{ track.id }}"
+                    hx-target="#playlist-modal-body"
+                    hx-swap="innerHTML"
+                    title="Добавить в плейлист">+</button>
+
+            <a href="{% url 'like_track' track.id %}"
+               hx-get="{% url 'like_track' track.id %}"
+               hx-target="#tracks-list"
+               hx-select="#tracks-list"
+               hx-swap="outerHTML"
+               title="Удалить из избранного"
+               style="background: none; border: none; color: var(--text-dim); font-size: 1.3rem; text-decoration: none; padding: 4px; border-radius: 50%; transition: 0.2s;"
+               onmouseover="this.style.background='rgba(255,255,255,0.15)'; this.style.color='#fff';"
+               onmouseout="this.style.background='none'; this.style.color='var(--text-dim)';"
+               class="remove-fav-btn">&#10005;</a>
+            {% endif %}
+        </div>
+    </div>
+    {% empty %}
+        <p style="color: var(--text-dim);">
+            {% if query %}Ничего не найдено.{% else %}Нет избранных треков.{% endif %}
+        </p>
+    {% endfor %}
+</div>
+
+{% endblock %}

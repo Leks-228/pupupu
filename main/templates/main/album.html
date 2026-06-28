@@ -1,0 +1,94 @@
+{% extends 'main/base.html' %}
+{% block title %}{{ album.title }}{% endblock %}
+{% block content %}
+
+<div class="album-header" style="display: flex; gap: 30px; margin-bottom: 30px; align-items: flex-start;">
+    <!-- Обложка альбома -->
+    <div class="album-cover" style="width: 250px; height: 250px; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 25px rgba(0,0,0,0.6); flex-shrink: 0;">
+        {% if album.cover %}
+            <img src="{{ album.cover.url }}" style="width: 100%; height: 100%; object-fit: cover;" alt="{{ album.title }}">
+        {% else %}
+            <div style="width: 100%; height: 100%; background: #1e1e2e; display: flex; align-items: center; justify-content: center; color: #555; font-size: 4rem;">
+                ♪
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Информация об альбоме -->
+    <div style="flex: 1;">
+        <h1 style="margin-bottom: 0.5rem;">{{ album.title }}</h1>
+        <h3 style="margin-bottom: 1rem;">
+            <a href="{% url 'artist_detail' album.artist.id %}"
+               hx-get="{% url 'artist_detail' album.artist.id %}"
+               hx-target="#main-content"
+               hx-select="#main-content"
+               hx-swap="outerHTML"
+               hx-push-url="true"
+               style="color: var(--accent); text-decoration: none;">
+                {{ album.artist.name }}
+            </a>
+        </h3>
+        <p style="color: var(--text-dim); font-size: 1.1rem;">{{ album.year }} • {{ album.get_type_display }}</p>
+    </div>
+</div>
+
+<h2 style="margin-bottom: 1rem;">Треки</h2>
+
+{% for track in tracks %}
+<div class="track-row">
+    <!-- Обложка трека (используем обложку альбома) -->
+    {% if album.cover %}
+        <img src="{{ album.cover.url }}" class="track-avatar" alt="Обложка">
+    {% else %}
+        <div class="track-avatar bg-secondary d-flex align-items-center justify-content-center text-white" style="background: #1e1e2e;">♪</div>
+    {% endif %}
+
+    <!-- Название и исполнитель -->
+    <div class="track-info-text">
+        <div class="track-title">
+            <span style="opacity: 0.6; margin-right: 6px;">{{ track.track_number }}.</span>{{ track.title }}
+        </div>
+        <div class="track-artist">
+            {% for artist in track.artists.all %}
+                <a href="{% url 'artist_detail' artist.id %}"
+                   hx-get="{% url 'artist_detail' artist.id %}"
+                   hx-target="#main-content"
+                   hx-select="#main-content"
+                   hx-swap="outerHTML"
+                   hx-push-url="true"
+                   style="color: var(--text-dim); text-decoration: none;">
+                    {{ artist.name }}
+                </a>{% if not forloop.last %}, {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Действия с треком (появляются при наведении) -->
+    <div class="track-actions">
+        <button class="play-track-btn play-track"
+                data-url="{% url 'stream_audio' file_path=track.audio_file.name %}"
+                data-title="{{ track.title }}"
+                data-artist="{% for artist in track.artists.all %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}"
+                data-index="{{ forloop.counter0 }}"
+                data-track-id="{{ track.id }}"
+                data-cover="{% if album.cover %}{{ album.cover.url }}{% endif %}"
+                title="Слушать">▶</button>
+
+        {% if user.is_authenticated %}
+        <button class="like-btn ...">
+            ♥
+        </button>
+
+        <button class="add-to-playlist-btn"
+                hx-get="{% url 'user_playlists' %}?track_id={{ track.id }}"
+                hx-target="#playlist-modal-body"
+                hx-swap="innerHTML"
+                title="Добавить в плейлист">+</button>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+    <p style="color: var(--text-dim);">Нет треков</p>
+{% endfor %}
+
+{% endblock %}
